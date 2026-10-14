@@ -1,0 +1,686 @@
+/* Layout: banco del trader. Una riga di stato, il tabellone
+   degli strumenti, i grafici dello strumento scelto, sotto news, forza e registro. Palette dal grafico di L: grafite, candele bianche e nere,
+   POC rosso e value area arancione. */
+:root {
+  --bg: #e9e8e4; --panel: #f6f5f2; --ink: #1d1e20; --muted: #64666a; --line: #d3d1cb;
+  --chart: #ffffff; --up: #ffffff; --dn: #1d1e20; --wick: #1d1e20;
+  --poc: #c8322a; --va: #d98a1e; --lungo: #a43c8f; --tsi: #c8322a; --ema: #55585c; --stk: #2e8b57; --std: #55585c;
+  --long: #237a4b; --short: #b8352d; --pronto: #237a4b; --osserva: #b7791f; --fermo: #7a7c80; --contro: #b8352d;
+  --chip: #e2e0da;
+  --pelo: #8a7158; --pelo-scuro: #6e5a45; --muso: #efe3cd; --muso-scuro: #2d2620; --ramo: #6b5a45; --foglia: #4f8a3c; --unghie: #3a3129;
+  --f-display: "Barlow Semi Condensed", "Arial Narrow", sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #2b2c2e; --panel: #333436; --ink: #ecebe8; --muted: #a2a3a6; --line: #47494c;
+  --chart: #3a3a3a; --up: #f4f4f2; --dn: #111213; --wick: #cfcfcc;
+  --poc: #ff5a4f; --va: #f0a23a; --lungo: #e070cc; --tsi: #ff5a4f; --ema: #f4f4f2; --stk: #5fd08a; --std: #f4f4f2;
+  --long: #5fd08a; --short: #ff6b5f; --pronto: #5fd08a; --osserva: #f0b44a; --fermo: #8d8f93; --contro: #ff6b5f;
+  --chip: #3f4043; --pelo: #a68a6c; --pelo-scuro: #86705a; --muso: #f1e6d2; --muso-scuro: #231d18; --ramo: #8c7a62; --foglia: #6fb05a; --unghie: #e9dcc4;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #2b2c2e; --panel: #333436; --ink: #ecebe8; --muted: #a2a3a6; --line: #47494c;
+  --chart: #3a3a3a; --up: #f4f4f2; --dn: #111213; --wick: #cfcfcc;
+  --poc: #ff5a4f; --va: #f0a23a; --lungo: #e070cc; --tsi: #ff5a4f; --ema: #f4f4f2; --stk: #5fd08a; --std: #f4f4f2;
+  --long: #5fd08a; --short: #ff6b5f; --pronto: #5fd08a; --osserva: #f0b44a; --fermo: #8d8f93; --contro: #ff6b5f;
+  --chip: #3f4043; --pelo: #a68a6c; --pelo-scuro: #86705a; --muso: #f1e6d2; --muso-scuro: #231d18; --ramo: #8c7a62; --foglia: #6fb05a; --unghie: #e9dcc4;
+  color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 14px/1.45 var(--f-body); margin: 0 }
+.wrap { max-width: 1400px; margin: 0 auto; padding: 14px 16px 32px; display: grid; gap: 12px }
+h1, h3 { font-family: var(--f-display); font-weight: 700; margin: 0; letter-spacing: .01em }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums }
+.r { text-align: right }
+.muto { color: var(--muted) }
+
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px }
+header h1 { font-size: 24px; line-height: 1.1 }
+header h1 span { color: var(--muted); font-weight: 500 }
+.meta { color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center }
+.filtro { font: 600 12px var(--f-body); border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  border-radius: 999px; padding: 3px 10px; cursor: pointer }
+.filtro:disabled { opacity: .6; cursor: wait }
+.filtro[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink) }
+.filtro:focus-visible, .riga-s:focus-visible { outline: 2px solid var(--va); outline-offset: 2px }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: var(--c) }
+.pill { font: 600 11px var(--f-body); text-transform: uppercase; letter-spacing: .06em; color: var(--c, var(--e));
+  border: 1px solid var(--c, var(--e)); border-radius: 999px; padding: 1px 8px; white-space: nowrap }
+
+/* riga di stato */
+.stato { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; font-size: 13px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px }
+.stato:empty { display: none }
+
+/* tabellone */
+.tab { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden }
+.tab-testa, .riga-s { display: grid; grid-template-columns: minmax(90px, 1.3fr) minmax(90px, 1fr) repeat(3, minmax(80px, 1fr)) 100px 110px;
+  gap: 10px; align-items: center; padding: 7px 12px }
+.tab-testa { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border-bottom: 1px solid var(--line) }
+.riga-s { width: 100%; border-top: 1px solid var(--line); position: relative }
+.tab-testa + .riga-s { border-top: 0 }
+.riga-s .nome { color: inherit; text-decoration: none }
+.riga-s .nome:hover b { text-decoration: underline }
+.piano-link { text-decoration: none }
+.riga-s:hover { background: var(--chip) }
+.riga-s[aria-current="true"] { background: var(--chip); box-shadow: inset 3px 0 0 var(--ink) }
+.nome b { font: 700 17px var(--f-display) }
+.lato { font: 600 14px var(--f-body); color: var(--c); white-space: nowrap }
+.lato.misto { color: var(--muted) }
+.fresco .lato { box-shadow: inset 0 0 0 1.5px var(--c); border-radius: 4px; padding: 1px 6px }
+.err { grid-column: 2 / -1; color: var(--muted); font-size: 12.5px }
+@media (max-width: 760px) {
+  .tab-testa { display: none }
+  .riga-s { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px }
+  .riga-s > :nth-child(6), .riga-s > :nth-child(7) { justify-self: start }
+  .riga-s .num { text-align: right }
+  .riga-s > :nth-child(3), .riga-s > :nth-child(4), .riga-s > :nth-child(5) { font-size: 12.5px }
+  .riga-s > :nth-child(3)::before { content: "D1 "; color: var(--muted); font-weight: 400 }
+  .riga-s > :nth-child(4)::before { content: "Vol "; color: var(--muted); font-size: 12px }
+  .riga-s > :nth-child(5)::before { content: "H1 "; color: var(--muted); font-size: 12px }
+}
+
+/* pannelli in basso: news, forza, registro */
+.quadro { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+@media (max-width: 1000px) { .quadro { grid-template-columns: minmax(0, 1fr) } }
+.pan { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; display: grid; gap: 8px; align-content: start; min-width: 0 }
+.pan:empty { display: none }
+.pan h3 { font-size: 17px; display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline }
+.pan h3 small { font: 400 12px var(--f-body); color: var(--muted) }
+.avviso { border-left: 3px solid var(--c); padding: 6px 10px; background: var(--chip); border-radius: 0 4px 4px 0; font-size: 13px }
+.nlista, .cronologia { list-style: none; margin: 0; padding: 0; display: grid; max-height: 240px; overflow: auto; align-content: start }
+.nlista .ev { display: grid; grid-template-columns: 44px 40px 34px minmax(0, 1fr); gap: 6px; padding: 4px 0; border-top: 1px solid var(--line); align-items: baseline; font-size: 12.5px }
+.nlista .ev.ora { box-shadow: inset 3px 0 0 var(--contro) }
+.nlista .h { font: 12px var(--f-mono); color: var(--muted) }
+.nlista .val { font: 700 13px var(--f-display) }
+.nlista .imp { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--c); margin-right: 6px; vertical-align: 1px }
+.schede { display: flex; flex-wrap: wrap; gap: 6px }
+.barre { display: grid; gap: 2px }
+.barre .r { display: grid; grid-template-columns: 34px minmax(0, 1fr) 48px; gap: 8px; align-items: center; font-size: 12.5px; text-align: left }
+.barre .r b { font: 700 13px var(--f-display) }
+.barre .num { text-align: right }
+.asse { position: relative; height: 12px }
+.dc { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; margin-top: 6px }
+.asse::before { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--muted); opacity: .6 }
+.asse i { position: absolute; top: 2px; height: 8px; background: var(--c) }
+.asse i.pos { left: 50%; border-radius: 0 3px 3px 0 }
+.asse i.neg { right: 50%; border-radius: 3px 0 0 3px }
+.cronologia li { display: grid; grid-template-columns: 44px 70px minmax(0, 1fr); gap: 8px; padding: 4px 0; border-top: 1px solid var(--line); align-items: baseline; font-size: 12.5px }
+.cronologia .quando { font: 11.5px var(--f-mono); color: var(--muted) }
+.cronologia .sym { font: 700 13px var(--f-display); color: var(--c) }
+.cronologia .vuota { display: block; color: var(--muted) }
+.legenda { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted) }
+.legenda i { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--c); vertical-align: middle; margin-right: 5px }
+.legenda i.tr { border-top-style: dashed }
+
+/* grafici D1 / H4 / H1 (Lightweight Charts, stile Luigi) */
+.grafici { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; display: grid; gap: 8px }
+.gr-barra { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 16px }
+.gr-titolo { font-size: 18px }
+#gr-strumenti { flex: 1 1 auto }
+.gr-scelta { font-size: 13px; color: var(--muted); display: flex; gap: 6px; align-items: center; cursor: pointer }
+.gr-atr { border-collapse: collapse; font: 500 13px "IBM Plex Mono", monospace; justify-self: start }
+.gr-atr caption { text-align: left; font: 500 12px "IBM Plex Sans", sans-serif; color: var(--muted); padding-bottom: 4px }
+.gr-atr th { font-weight: 600; color: var(--muted); text-align: left; padding: 2px 18px 2px 0 }
+.gr-atr td { padding: 2px 18px 2px 0; white-space: nowrap }
+.gr-atr small { color: var(--muted) }
+.gr-atr .su { color: #34c759 } .gr-atr .giu { color: #ff3b30 }
+.gr-griglia { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; flex: 1 1 0; min-width: 0; height: max(470px, calc(100vh - 210px)) }
+.gr-griglia.due { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+.gr-col { background: #3d3d3d; border-radius: 4px; padding: 6px; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 0 }
+.gr-testa { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; color: #cfcfcf; font: 500 12px "IBM Plex Mono", monospace; padding: 2px 4px 6px }
+.gr-testa b { font: 500 14px "IBM Plex Sans", sans-serif; color: #fff; white-space: pre }
+.gr-prezzo { flex: 1 1 0; min-height: 0; overflow: hidden; position: relative; border-bottom: 1px solid #555 }
+.gr-profilo { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none }
+.gr-osc { flex: 0 0 auto; height: 78px; position: relative; border-bottom: 1px solid #555 }
+@media (max-width: 900px) { .gr-griglia.due { grid-template-columns: minmax(0, 1fr); grid-auto-rows: max(440px, 80vh); height: auto } }
+
+/* marchio: il bradipo appeso al ramo accanto al titolo */
+.marchio { display: flex; align-items: center; gap: 10px }
+.logo { width: 72px; height: 56px; flex: none; overflow: visible }
+/* dondola dal ramo, lento come un bradipo; ogni tanto sbatte le palpebre */
+.logo .dondola { transform-origin: 32px 7px; animation: dondola 6s ease-in-out infinite }
+.logo .occhi { transform-box: fill-box; transform-origin: center; animation: palpebre 7s infinite }
+@keyframes dondola { 0%, 100% { transform: rotate(-4deg) } 50% { transform: rotate(4deg) } }
+@keyframes palpebre { 0%, 94%, 100% { transform: scaleY(1) } 96% { transform: scaleY(.1) } }
+@media (prefers-reduced-motion: reduce) { .logo .dondola, .logo .occhi { animation: none } }
+
+/* striscia che scorre (si ferma col mouse; ferma del tutto se il sistema chiede meno movimento) */
+.ticker { overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; font-size: 13px }
+.ticker-scorre { display: inline-flex; white-space: nowrap; padding: 6px 0; animation: scorri var(--durata, 60s) linear infinite }
+.ticker:hover .ticker-scorre, .ticker:focus-within .ticker-scorre { animation-play-state: paused }
+.voce { padding: 0 14px; border-right: 1px solid var(--line) }
+.voce b { font-weight: 600 }
+@keyframes scorri { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+@media (prefers-reduced-motion: reduce) {
+  .ticker { overflow-x: auto }
+  .ticker-scorre { animation: none }
+}
+.gr-scelta[hidden] { display: none }
+.gr-cme-nota { margin: 2px 0 6px; font-size: 12px }
+/* COT */
+.cot { border-collapse: collapse; width: 100%; font-size: 13px }
+.cot th, .cot td { padding: 3px 6px; text-align: left; border-bottom: 1px solid var(--line) }
+.cot thead th { font: 400 11px var(--f-body); color: var(--muted); text-transform: uppercase; letter-spacing: .04em }
+.cot td.num, .cot thead th.num { text-align: right; white-space: nowrap }
+.cot tr.scelto th { text-decoration: underline }
+.cot-ind { display: inline-block; position: relative; width: 70px; height: 6px; border-radius: 3px; vertical-align: middle; margin-right: 6px;
+  background: linear-gradient(90deg, var(--short), var(--line) 50%, var(--long)) }
+.cot-ind i { position: absolute; top: -3px; width: 3px; height: 12px; margin-left: -1px; background: var(--ink, #222); border-radius: 1px }
+.cot-ind.estremo { outline: 2px solid var(--contro); outline-offset: 2px }
+.cot-box { overflow-x: auto; min-width: 0 }
+@media (max-width: 600px) {
+  .cot { font-size: 12px }
+  .cot th, .cot td { padding: 3px 3px }
+  .cot-ind { width: 34px; margin-right: 3px }
+  .cot thead th { font-size: 10px; letter-spacing: 0 }
+  /* utente 20/10 "mobile first, qualche tabella era rotta": le tabelle larghe (.carte) diventano una scheda per riga,
+     etichetta presa da data-l; .largo occupa tutta la riga della scheda */
+  .cot.carte thead { display: none }
+  .cot.carte, .cot.carte tbody { display: block }
+  .cot.carte tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2px 14px; padding: 8px 0;
+    border-bottom: 1px solid var(--line) }
+  .cot.carte td, .cot.carte th { display: flex; justify-content: space-between; gap: 6px; align-items: baseline;
+    border: 0; padding: 1px 0; text-align: right; white-space: nowrap; min-width: 0 }
+  .cot.carte [data-l]::before { content: attr(data-l); font: 400 11px var(--f-body); color: var(--muted); text-align: left }
+  .cot.carte .largo { grid-column: 1 / -1; white-space: normal }
+  .cot.carte .a-capo { white-space: normal }
+  .cot.carte .testa { font-weight: 700 }
+}
+/* VIX */
+.vix-riga { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline }
+.vix-val { font: 600 34px var(--f-display) }
+.vix-grafico { width: 100%; height: 70px; display: block }
+.vix-grafico .soglia { stroke: var(--line); stroke-dasharray: 3 3 }
+.vix-grafico text { font: 10px var(--f-mono); fill: var(--muted) }
+/* mappa azioni USA */
+.mappa { margin: 12px 0 }
+.mappa-box { height: 560px; min-width: 0 }
+@media (max-width: 600px) { .mappa-box { height: 420px } }
+/* ETF */
+.etf th small { color: var(--muted); font: 400 11px var(--f-mono) }
+.etf thead th.num { text-align: right }
+.etf-mappa { list-style: none; margin: 6px 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 4px }
+.etf-mappa.rif { margin-top: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line) }
+.etf-riq { border-radius: 4px; padding: 6px 8px; min-width: 0; display: flex; flex-direction: column; gap: 1px; border: 1px solid var(--line) }
+.etf-riq b { font: 600 13px var(--f-mono) }
+.etf-riq span { font-size: 11px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.etf-riq em { font: 600 14px var(--f-mono); font-style: normal }
+.pill-pieno { display: inline-block; min-width: 64px; text-align: center; padding: 1px 6px; border-radius: 4px; color: #fff;
+  background: var(--c); font-weight: 500 }
+
+/* struttura a pagine: pulsanti in alto, una pagina alla volta */
+.app, .app main { display: grid; gap: 12px; min-width: 0 }
+.barra-alta { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px }
+.nav { display: flex; flex-wrap: wrap; gap: 6px }
+.nav-btn { font: 600 15px var(--f-display); letter-spacing: .02em; color: var(--ink); text-decoration: none; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 6px; padding: 7px 14px }
+.nav-btn:hover { background: var(--chip) }
+.nav-btn[aria-current="page"] { background: var(--ink); color: var(--bg); border-color: var(--ink) }
+.nav-btn:focus-visible, a.filtro:focus-visible, .piano-btn:focus-visible { outline: 2px solid var(--va); outline-offset: 2px }
+a.filtro { text-decoration: none; display: inline-block }
+.nota { margin: 0; font-size: 12.5px }
+.pan h4 { font: 700 15px var(--f-display); margin: 6px 0 0 }
+.cronologia.lunga { max-height: 70vh }
+.storia-trade { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 8px 10px; border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 6px; font-size: 13px }
+.storia-trade > b:first-child { color: var(--c); font-size: 15px }
+@media (max-width: 600px) { .nav-btn { padding: 6px 10px; font-size: 14px } }
+
+/* Analisi: un pulsante per piano */
+.piani { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px }
+.piano-btn { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; align-items: center; padding: 10px 12px;
+  border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 6px; background: var(--bg); color: var(--ink); text-decoration: none }
+.piano-btn:hover { background: var(--chip) }
+.pb-testa b { font: 700 17px var(--f-display) }
+.pb-num { font-size: 15px }
+.pb-nota { font-size: 12px; justify-self: end }
+.piano h3 { gap: 6px 10px; align-items: center }
+.piano-griglia { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: 16px; align-items: start }
+@media (max-width: 760px) { .piano-griglia { grid-template-columns: minmax(0, 1fr) } }
+.cifre { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px }
+.cifre > div { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0 }
+.cifre dt { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted) }
+.cifre dd { margin: 0 }
+.cifre dd.num { font: 600 24px var(--f-mono) }
+.cifre dd.muto { font-size: 12px }
+.scala { width: 100%; height: auto; max-height: 380px; font: 11.5px var(--f-body) }
+.scala .num { font-family: var(--f-mono) }
+.motivi { margin: 0; padding-left: 18px; display: grid; gap: 2px }
+
+/* Quadro: una carta per strumento */
+.quadro { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 10px }
+.quadro-carta { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 6px;
+  background: var(--bg); color: var(--ink); text-decoration: none; min-width: 0 }
+a.quadro-carta:hover { background: var(--chip) }
+a.quadro-carta:focus-visible { outline: 2px solid var(--va); outline-offset: 2px }
+.qc-testa { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline }
+.qc-testa b { font: 700 17px var(--f-display) }
+.qc-testa .pill { margin-left: auto }
+.qc-frase { margin: 0; font-size: 14px }
+.qc-avvisi { margin: 0; font-size: 13px; color: var(--osserva) }
+.qc-livelli { border-collapse: collapse; font-size: 13px; width: 100%; max-width: 560px }
+.qc-livelli td { padding: 2px 4px; border-bottom: 1px solid var(--line) }
+.qc-livelli td:not(:first-child) { text-align: right; white-space: nowrap }
+.qc-livelli .su td:first-child { color: var(--short) } .qc-livelli .giu td:first-child { color: var(--long) }
+.qc-livelli .ora td { font-weight: 700 }
+
+/* dettaglio del piano: il grafico è la pagina */
+.grafici.grande { padding: 8px; gap: 6px }
+.grafici.grande .gr-atr, .grafici.grande .gr-barra { display: none }
+.gr-foto { margin-left: auto; background: none; border: 1px solid #666; border-radius: 4px; color: #eee; font: 12px "IBM Plex Mono", monospace; padding: 0 6px; cursor: pointer }
+.gr-foto:hover { border-color: #ccc }
+.piano-barra { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center }
+.pb-nome { font: 700 20px var(--f-display) }
+.chip { font-size: 13px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; background: var(--bg); white-space: nowrap }
+.chip small { color: var(--muted); font-size: 11px }
+.chip .num { font-weight: 600 }
+.chip.rosso .num { color: var(--short) } .chip.verde .num { color: var(--long) }
+.piano-sotto summary { cursor: pointer; font-size: 13px }
+.piano-sotto[open] summary .muto { display: none }
+.mano { display: inline-flex; gap: 4px; align-items: center; margin: 0 }
+.mano input { width: 96px; font: 500 12.5px var(--f-mono); padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink) }
+
+/* Pagina Operazioni: conto simulato in diretta */
+.operazioni { display: grid; gap: 12px }
+.op-conto { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px }
+.op-conto div { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg) }
+.op-conto span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em }
+.op-conto b { font-size: 18px }
+.op-nota { font-size: 12px; margin: 0 }
+.op-griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px }
+.op-card { border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 6px; padding: 10px 12px; display: grid; gap: 10px; background: var(--bg) }
+.op-card header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px }
+.op-card header b { font-size: 16px }
+.op-card .lato { color: var(--c); font-weight: 600; font-size: 13px }
+.op-euro { margin-left: auto; font-size: 20px; font-weight: 600 }
+.op-barra { position: relative; height: 8px; margin: 6px 4px; border-radius: 4px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--short) 35%, transparent), var(--line) 50%, color-mix(in srgb, var(--long) 35%, transparent)) }
+.op-barra i { position: absolute; top: 50%; transform: translate(-50%, -50%); border-radius: 2px; transition: left .6s ease }
+.op-barra .stop { width: 3px; height: 18px; background: var(--short) }
+.op-barra .in { width: 2px; height: 14px; background: var(--muted) }
+.op-barra .ora { width: 12px; height: 12px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 2px var(--panel) }
+.op-dati { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; margin: 0 }
+.op-dati dt { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em }
+.op-dati dd { margin: 0; font-size: 14px }
+.op-dati small { display: block; font-size: 12px; white-space: nowrap }
+.scorre { overflow-x: auto }
+@media (prefers-reduced-motion: reduce) { .op-barra i { transition: none } }
+.op-grafico { height: 400px }
+.op-titolo-grafico { margin: 0; font-size: 15px }
+.op-titolo-grafico small { font: 400 12px var(--f-body) }
+.op-card[role="button"] { cursor: pointer }
+.op-card[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink) }
+.op-card:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px }
+@media (max-width: 760px) { .op-grafico { height: 320px } }
+.op-grafici { display: grid; gap: 2px; border-radius: 6px; overflow: hidden }
+.op-osc { height: 110px }
+@media (max-width: 760px) { .op-osc { height: 90px } }
+.op-vera { margin: 0; padding: 4px 8px; font-size: .78rem; background: #3d3d3d; color: #cfcfcf; overflow-wrap: anywhere }
+
+/* conti veri (Operazioni, solo in locale) */
+.cv-conto + .cv-conto { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px }
+.cv-testa { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 0 0 6px }
+.cv-pos { margin: 0 0 8px; padding-left: 18px; font-size: 13px }
+.cv-tasti { display: flex; flex-wrap: wrap; gap: 8px }
+.cv-tasti .filtro { padding: 6px 12px; font-size: 13px }
+.cv-rosso { border-color: var(--short); color: var(--short) }
+.cv-saldo { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); margin: 0 0 10px }
+.cv-avviso { margin: 0 0 8px; color: var(--short); font-size: 13px }
+.gr-tf { display: inline-flex; gap: 2px }
+.gr-tf button { font: 600 11px var(--f-mono); padding: 1px 5px; border: 1px solid #555; border-radius: 3px; background: transparent; color: #cfcfcf; cursor: pointer }
+.gr-tf button[aria-pressed="true"] { background: #cfcfcf; color: #3d3d3d; border-color: #cfcfcf }
+.gr-tf button:disabled { opacity: .35; cursor: default }
+.gr-tf button:focus-visible { outline: 2px solid #ffd60a; outline-offset: 1px }
+.reg-filtri { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 8px 0; font-size: 12px; color: var(--muted) }
+.reg-filtri select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; margin-left: 4px }
+.reg-testa-eq { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px }
+.reg-testa-eq p { margin: 0 }
+.reg-equity { height: 260px; margin: 6px 0 10px; border-radius: 6px; overflow: hidden }
+.reg-trade { max-height: 60vh; overflow: auto }
+.reg-riga { cursor: pointer }
+.reg-riga:hover { background: var(--bg) }
+@media (max-width: 760px) { .reg-equity { height: 200px } }
+
+/* tabellone dei due sistemi (26/10): H8 H1 H1/H8 | D1 H4 H4/D1 */
+.tab2 .tab-testa, .tab2 .riga-s { grid-template-columns: minmax(90px, 1.2fr) minmax(80px, .9fr) repeat(2, minmax(80px, 1fr)) minmax(110px, 1.1fr)
+  repeat(2, minmax(80px, 1fr)) minmax(110px, 1.1fr) 100px }
+.tab2 .tab-gruppi { border-bottom: 0; padding-bottom: 0 }
+.tab2 .tab-gruppi .g1 { grid-column: 3 / span 3 }
+.tab2 .tab-gruppi .g2 { grid-column: 6 / span 3 }
+.tab2 .s1, .tab2 .s2, .tab2 .g1, .tab2 .g2 { border-left: 1px solid var(--line); padding-left: 8px }
+@media (max-width: 720px) {
+  .tab2 .riga-s { grid-template-columns: repeat(3, minmax(0, 1fr)) }
+  .tab2 .riga-s > .nome { grid-column: 1 / span 2 }
+  .tab2 .riga-s > :nth-child(n) { justify-self: start; font-size: 12.5px }
+  .tab2 .riga-s > :nth-child(n)::before { content: none }
+  .tab2 .riga-s > [data-l]::before { content: attr(data-l) " "; color: var(--muted); font-size: 11px }
+  .tab2 .s1, .tab2 .s2 { border-left: 0; padding-left: 0 }
+}
+
+/* 26/10: solo il sistema D1/H4 */
+.tab-d1 .tab-testa, .tab-d1 .riga-s { grid-template-columns: minmax(90px, 1.2fr) minmax(80px, .9fr) repeat(2, minmax(90px, 1fr)) minmax(140px, 1.3fr) }
+
+/* semaforo del tabellone (26/10) */
+.semaforo { display: inline-block; width: 16px; height: 16px; border-radius: 50%; background: var(--c);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 30%, transparent); vertical-align: middle }
+/* i semafori lampeggiano (utente 26/10): il verde più deciso, giallo e rosso piano; niente animazione per chi la toglie */
+@keyframes lampeggia { 0%, 100% { opacity: 1; box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 30%, transparent) }
+  50% { opacity: .35; box-shadow: 0 0 0 6px color-mix(in srgb, var(--c) 0%, transparent) } }
+.semaforo { animation: lampeggia 2.4s ease-in-out infinite }
+.semaforo[style*="--pronto"] { animation-duration: .9s }
+@media (prefers-reduced-motion: reduce) { .semaforo { animation: none } }
+
+/* ===== tabellone D1/H4 "pannello fico" (utente 26/10): vetro smerigliato, profondità, semafori 3D alla Josh Comeau ===== */
+.tab-d1 { position: relative; isolation: isolate; max-width: 940px; overflow: visible; border-radius: 18px; padding: 6px 8px 8px;
+  background: color-mix(in srgb, var(--panel) 62%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 1px 0 color-mix(in srgb, #fff 18%, transparent) inset,
+              0 18px 40px -18px rgba(0, 0, 0, .45), 0 6px 14px -8px rgba(0, 0, 0, .3) }
+/* bagliori colorati dietro il vetro */
+.tab-d1::before { content: ""; position: absolute; inset: -30px -40px; z-index: -1; pointer-events: none; filter: blur(40px); opacity: .55;
+  background: radial-gradient(38% 50% at 12% 20%, color-mix(in srgb, var(--long) 45%, transparent), transparent 70%),
+              radial-gradient(34% 45% at 88% 85%, color-mix(in srgb, var(--short) 40%, transparent), transparent 70%),
+              radial-gradient(30% 40% at 70% 10%, rgba(240, 196, 25, .30), transparent 70%) }
+.tab-d1 .tab-testa, .tab-d1 .riga-s { grid-template-columns: 44px minmax(110px, 1.2fr) minmax(90px, .9fr) minmax(120px, 1fr) minmax(110px, 1fr);
+  border: 0; padding-left: 12px; padding-right: 14px }
+.tab-d1 .tab-testa { padding-top: 10px; padding-bottom: 8px; letter-spacing: .12em }
+.tab-d1 .riga-s { margin: 5px 0; border-radius: 12px; min-height: 50px; align-items: center;
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 7%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, #fff 10%, transparent) inset, 0 2px 0 color-mix(in srgb, #000 22%, transparent);
+  transition: transform .25s cubic-bezier(.3, .7, .4, 1.5), box-shadow .25s, background .25s }
+.tab-d1 .riga-s:hover { transform: translateY(-2px); background: color-mix(in srgb, var(--panel) 80%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, #fff 14%, transparent) inset, 0 5px 0 color-mix(in srgb, #000 22%, transparent),
+              0 12px 22px -12px rgba(0, 0, 0, .45) }
+.tab-d1 .riga-s:active { transform: translateY(1px); transition-duration: 40ms;
+  box-shadow: 0 1px 0 color-mix(in srgb, #fff 8%, transparent) inset, 0 1px 0 color-mix(in srgb, #000 22%, transparent) }
+.tab-d1 .riga-s .nome b { font-size: 16px; letter-spacing: .01em }
+.tab-d1 .prezzo { font-variant-numeric: tabular-nums; opacity: .9 }
+.tab-d1 .s2 { border-left: 0; padding-left: 0 }
+.tab-d1 .fresco .lato { box-shadow: none; padding: 0 }
+/* righe come il semaforo: verde in evidenza, rosso spento */
+.tab-d1 .st-verde { background: color-mix(in srgb, var(--pronto) 18%, color-mix(in srgb, var(--panel) 60%, transparent));
+  border-color: color-mix(in srgb, var(--pronto) 45%, transparent) }
+.tab-d1 .st-rosso { opacity: .55 }
+.tab-d1 .st-rosso:hover { opacity: .9 }
+/* "nuovo": bottone 3D in miniatura */
+.tab-d1 .nuovo { display: inline-block; margin-left: 8px; padding: 1px 7px 2px; border-radius: 999px; font: 700 10px var(--f-body);
+  font-style: normal; text-transform: uppercase; letter-spacing: .08em; color: #fff; vertical-align: 1px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 85%, #fff), var(--c));
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--c) 55%, #000), 0 3px 6px -2px rgba(0, 0, 0, .4) }
+/* semafori: lampadine 3D con riflesso, alloggiate in una ghiera */
+.tab-d1 .sem-cella { display: grid; place-items: center }
+.tab-d1 .semaforo { width: 22px; height: 22px; position: relative;
+  background: radial-gradient(circle at 34% 30%, color-mix(in srgb, var(--c) 35%, #fff) 0 14%, var(--c) 48%, color-mix(in srgb, var(--c) 55%, #000) 100%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink) 10%, transparent), 0 0 0 4px color-mix(in srgb, #000 25%, transparent),
+              0 3px 0 4px color-mix(in srgb, #000 30%, transparent), 0 0 14px 2px color-mix(in srgb, var(--c) 55%, transparent) }
+@keyframes lampada { 0%, 100% { filter: brightness(1.1) saturate(1.1) } 50% { filter: brightness(.55) saturate(.8) } }
+.tab-d1 .semaforo { animation: lampada 2.4s ease-in-out infinite }
+.tab-d1 .semaforo[style*="--pronto"] { animation-duration: .9s }
+@media (prefers-reduced-motion: reduce) { .tab-d1 .semaforo, .tab-d1 .riga-s { animation: none; transition: none } }
+@media (max-width: 720px) {
+  .tab-d1 { padding: 4px 4px 6px; border-radius: 14px }
+  .tab-d1 .riga-s { grid-template-columns: 36px minmax(0, 1fr) auto; row-gap: 4px; padding: 8px 10px }
+  .tab-d1 .riga-s > .sem-cella { grid-row: span 2 }
+  .tab-d1 .riga-s > [data-l] { grid-column: auto; font-size: 12.5px }
+}
+@media (max-width: 720px) {
+  .tab-d1 .riga-s { grid-template-columns: 38px minmax(0, 1fr) auto; grid-template-areas: "s n p" "s d h"; column-gap: 10px }
+  .tab-d1 .riga-s > .sem-cella { grid-area: s; grid-row: auto }
+  .tab-d1 .riga-s > .nome { grid-area: n; grid-column: auto }
+  .tab-d1 .riga-s > .prezzo { grid-area: p; justify-self: end }
+  .tab-d1 .riga-s > .sup { grid-area: d; justify-self: start }
+  .tab-d1 .riga-s > .oper { grid-area: h; justify-self: end }
+  .tab-d1 .riga-s > [data-l]::before { content: attr(data-l); margin-right: 6px; color: var(--muted); font-size: 11px }
+  .tab-d1 .riga-s > [data-l] { display: flex; align-items: center; white-space: nowrap }
+}
+@media (min-width: 721px) { .tab-d1 .tab-testa, .tab-d1 .riga-s { column-gap: 28px } }
+/* semaforo in fondo a destra (utente 26/10) */
+.tab-d1 .tab-testa, .tab-d1 .riga-s { grid-template-columns: minmax(110px, 1.2fr) minmax(90px, .9fr) minmax(120px, 1fr) minmax(110px, 1fr) 44px; padding-left: 18px }
+@media (max-width: 720px) {
+  .tab-d1 .riga-s { grid-template-columns: minmax(0, 1fr) auto 38px; grid-template-areas: "n p s" "d h s"; padding-left: 12px }
+}
+/* ordine per D1 (utente 26/10) */
+.tab-d1 .ordina { all: unset; cursor: pointer; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit;
+  padding: 2px 8px; margin-left: -8px; border-radius: 999px; transition: background .2s }
+.tab-d1 .ordina:hover { background: color-mix(in srgb, var(--ink) 10%, transparent) }
+.tab-d1 .ordina[aria-pressed="true"] { color: var(--ink); background: color-mix(in srgb, var(--ink) 12%, transparent) }
+.tab-d1 .ordina:focus-visible { outline: 2px solid var(--va); outline-offset: 2px }
+/* tutta la larghezza, due colonne affiancate (utente 26/10) */
+.tab-d1-griglia { display: grid; grid-template-columns: repeat(auto-fit, minmax(560px, 1fr)); gap: 16px; align-items: start }
+.tab-d1-griglia .tab-d1 { max-width: none }
+@media (max-width: 1199px) {
+  .tab-d1-griglia { grid-template-columns: 1fr }
+}
+/* niente barre di scorrimento (utente 26/10): i bagliori non escono dal pannello, righe più compatte */
+.tab-d1::before { inset: 0 }
+.tab-d1 .riga-s { min-height: 44px; margin: 3px 0; padding-top: 6px; padding-bottom: 6px }
+.tab-d1 .tab-testa { padding-top: 8px; padding-bottom: 6px }
+.tab-d1-griglia + .nota { font-size: 11.5px; margin-top: 6px }
+html { overflow-x: clip }
+
+/* ===== tabellone D1/H4, passata di design (26/10). Colori dal bradipo dell'app e dal grafico di Luigi:
+   foglia = verde, POC = rosso, value area = giallo, pelo = riflessi del vetro. Un solo elemento forte: il semaforo. ===== */
+.tab-d1 { --t-verde: var(--foglia); --t-rosso: var(--poc); --t-giallo: var(--va); --t-pelo: var(--pelo) }
+.tab-d1::before { background:
+    radial-gradient(40% 55% at 8% 15%, color-mix(in srgb, var(--foglia) 40%, transparent), transparent 70%),
+    radial-gradient(35% 50% at 95% 90%, color-mix(in srgb, var(--pelo) 45%, transparent), transparent 70%); opacity: .45 }
+.tab-d1 { border-color: color-mix(in srgb, var(--pelo) 28%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--muso) 22%, transparent) inset, 0 18px 40px -20px rgba(0, 0, 0, .5) }
+/* intestazioni: minuscolo, niente maiuscolo spaziato */
+.tab-d1 .tab-testa { text-transform: none; letter-spacing: 0; font: 500 12.5px var(--f-body); color: var(--muted) }
+/* righe quiete: niente sollevamento, solo una luce al passaggio */
+.tab-d1 .riga-s, .tab-d1 .riga-s:hover, .tab-d1 .riga-s:active { transform: none }
+.tab-d1 .riga-s { box-shadow: 0 1px 0 color-mix(in srgb, var(--muso) 8%, transparent) inset; transition: background .2s }
+.tab-d1 .riga-s:hover { box-shadow: 0 1px 0 color-mix(in srgb, var(--muso) 12%, transparent) inset }
+.tab-d1 .riga-s .nome b { font: 600 18px/1.1 var(--f-display); letter-spacing: .01em }
+.tab-d1 .prezzo { font: 500 14px var(--f-body); font-variant-numeric: tabular-nums lining-nums }
+.tab-d1 .st-verde { background: color-mix(in srgb, var(--t-verde) 16%, color-mix(in srgb, var(--panel) 60%, transparent));
+  border-color: color-mix(in srgb, var(--t-verde) 50%, transparent) }
+.tab-d1 .nuovo { text-transform: none; letter-spacing: .02em; font: 600 11px var(--f-body); padding: 1px 8px 2px }
+/* il semaforo: scatoletta 3D alla Josh Comeau (bordo in rilievo sotto), tre lampade, solo una accesa che pulsa */
+.tab-d1 .sem-cella { justify-items: end }
+/* "dentro" con gli euro sotto, dentro la sua colonna (utente 27/10: il -0,45 € usciva dalla riga del Dow) */
+.dentro-box { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; white-space: nowrap }
+.dentro-box small { font-size: 11.5px }
+.dentro-box .pill { font-size: 9.5px; letter-spacing: .02em; padding-left: 5px; padding-right: 5px; max-width: 64px }
+.semaforo-box { display: inline-flex; gap: 4px; padding: 4px 6px; border-radius: 10px; position: relative; top: -2px;
+  background: linear-gradient(180deg, #3b3833, #23211e);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .14) inset, 0 3px 0 #141210, 0 6px 10px -4px rgba(0, 0, 0, .55) }
+.lampada { width: 12px; height: 12px; border-radius: 50%; display: block; --c: var(--t-giallo);
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 30%, #444) 0 18%, color-mix(in srgb, var(--c) 22%, #1a1917) 75%);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 0 1px 0 rgba(255, 255, 255, .06) }
+.lampada.rossa { --c: var(--t-rosso) } .lampada.verde { --c: var(--t-verde) }
+.lampada.accesa { background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 30%, #fff) 0 16%, var(--c) 52%, color-mix(in srgb, var(--c) 60%, #000) 100%);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .45), 0 0 10px 2px color-mix(in srgb, var(--c) 70%, transparent);
+  animation: lampada 2.4s ease-in-out infinite }
+.lampada.verde.accesa { animation-duration: .9s }
+@media (prefers-reduced-motion: reduce) { .lampada.accesa { animation: none } }
+.tab-d1 .tab-testa, .tab-d1 .riga-s { grid-template-columns: minmax(0, 1.2fr) minmax(0, .9fr) minmax(0, 1fr) minmax(0, 1fr) 64px }
+/* due pannelli affiancati sotto i 1400 px: le colonne minime erano più larghe della riga e il semaforo usciva (utente 27/10) */
+@media (min-width: 721px) and (max-width: 1400px) { .tab-d1 .tab-testa, .tab-d1 .riga-s { column-gap: 14px } }
+@media (max-width: 720px) { .tab-d1 .riga-s { grid-template-columns: minmax(0, 1fr) auto 64px } }
+/* il rosso spegne la riga ma non il semaforo; lampade un filo più grandi */
+.tab-d1 .st-rosso, .tab-d1 .st-rosso:hover { opacity: 1 }
+.tab-d1 .st-rosso > :not(.sem-cella) { opacity: .5; transition: opacity .2s }
+.tab-d1 .st-rosso:hover > :not(.sem-cella) { opacity: .9 }
+.lampada { width: 14px; height: 14px }
+
+/* ===================== tutta l'app nello stile del tabellone (utente 26/10, "vai") =====================
+   Vetro tinto coi colori del bradipo, pulsanti in rilievo alla Josh Comeau, niente maiuscolo spaziato,
+   cifre in colonna col carattere del testo. I contenuti non cambiano. */
+:root { --f-mono: var(--f-body); --vetro-bordo: color-mix(in srgb, var(--pelo) 26%, transparent);
+  --vetro-luce: color-mix(in srgb, var(--muso) 14%, transparent) }
+body { font-variant-numeric: tabular-nums;
+  background: radial-gradient(60vw 50vh at 0% 0%, color-mix(in srgb, var(--foglia) 12%, transparent), transparent 70%),
+              radial-gradient(60vw 60vh at 100% 100%, color-mix(in srgb, var(--pelo) 14%, transparent), transparent 70%),
+              var(--bg) fixed }
+/* superfici in vetro */
+.pan, .ticker, .stato, .tab:not(.tab-d1) {
+  background: color-mix(in srgb, var(--panel) 66%, transparent);
+  backdrop-filter: blur(14px) saturate(130%); -webkit-backdrop-filter: blur(14px) saturate(130%);
+  border: 1px solid var(--vetro-bordo); border-radius: 14px;
+  box-shadow: 0 1px 0 var(--vetro-luce) inset, 0 14px 30px -20px rgba(0, 0, 0, .45) }
+.pan { padding: 14px 16px }
+.op-card, .op-conto div {
+  background: color-mix(in srgb, var(--panel) 50%, transparent); border-color: var(--vetro-bordo); border-radius: 12px;
+  box-shadow: 0 1px 0 var(--vetro-luce) inset, 0 2px 0 color-mix(in srgb, #000 18%, transparent) }
+.op-card { border-left-width: 4px }
+.pan h3 { font: 600 19px/1.15 var(--f-display); letter-spacing: .01em }
+/* niente maiuscolo spaziato nelle etichette */
+.pill, .tab-testa, .cot thead th, .cifre dt, .op-conto span, .op-dati dt { text-transform: none; letter-spacing: 0 }
+.op-conto span, .op-dati dt, .cifre dt { font-size: 12px }
+.pill { font-size: 11.5px }
+/* menu e pulsanti in rilievo: bordo scuro sotto, si alzano al passaggio e si abbassano al clic */
+.nav-btn, .filtro { position: relative; border-radius: 10px; border: 1px solid var(--vetro-bordo);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, #fff 8%), var(--panel));
+  box-shadow: 0 1px 0 var(--vetro-luce) inset, 0 3px 0 color-mix(in srgb, var(--pelo-scuro) 45%, #000 25%);
+  transition: transform .18s cubic-bezier(.3, .7, .4, 1.5), box-shadow .18s }
+.nav-btn:hover, .filtro:hover:not(:disabled) { transform: translateY(-1px); background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 85%, #fff 15%), var(--panel));
+  box-shadow: 0 1px 0 var(--vetro-luce) inset, 0 4px 0 color-mix(in srgb, var(--pelo-scuro) 45%, #000 25%) }
+.nav-btn:active, .filtro:active:not(:disabled) { transform: translateY(2px); transition-duration: 40ms;
+  box-shadow: 0 1px 0 var(--vetro-luce) inset, 0 1px 0 color-mix(in srgb, var(--pelo-scuro) 45%, #000 25%) }
+.nav-btn[aria-current="page"], .filtro[aria-pressed="true"] { color: #fff; border-color: color-mix(in srgb, var(--foglia) 70%, #000);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--foglia) 88%, #fff 12%), var(--foglia));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .25) inset, 0 3px 0 color-mix(in srgb, var(--foglia) 55%, #000) }
+.ticker { border-radius: 12px }
+@media (prefers-reduced-motion: reduce) { .nav-btn, .filtro { transition: none } .nav-btn:hover, .nav-btn:active, .filtro:hover, .filtro:active { transform: none } }
+
+/* ===================== passata su tutte le pagine (utente 26/10, "lavora su tutta l'applicazione") =====================
+   Solo forma: sfondo fermo, griglie senza buchi, il grafico più in alto, schede in vetro come il resto. */
+/* sfondo: "fixed" nello shorthand fermava solo l'ultimo strato, i bagliori si ripetevano a strisce e finivano a metà pagina */
+html { min-height: 100% ; background: var(--bg) }
+body { min-height: 100vh; background-repeat: no-repeat; background-attachment: fixed }
+/* pannelli affiancati (Registro, Mercato USA, Macro): riempiono la riga, ognuno alto quanto il suo contenuto */
+.quadro:has(> .pan) { grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); align-items: start }
+.app > .quadro:has(> .pan:nth-child(2):last-child) { grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)) }
+/* schede dentro i pannelli: stesso vetro delle carte delle operazioni */
+.piano-btn, .quadro-carta, .cifre > div, .storia-trade, .etf-riq {
+  border-radius: 12px; border-color: var(--vetro-bordo);
+  box-shadow: 0 1px 0 var(--vetro-luce) inset, 0 2px 0 color-mix(in srgb, #000 14%, transparent) }
+.piano-btn, .quadro-carta { background: color-mix(in srgb, var(--panel) 50%, transparent); transition: background .2s }
+.piano-btn:hover, a.quadro-carta:hover { background: color-mix(in srgb, var(--panel) 85%, transparent) }
+/* Grafici: ATR su una riga sola, così i grafici salgono (il protagonista è il grafico) */
+.gr-atr:not([hidden]) { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 20px; font: 500 13px var(--f-body) }
+.gr-atr caption { display: inline; padding: 0 4px 0 0 }
+.gr-atr tbody { display: contents }
+.gr-atr tr { display: inline-flex; gap: 6px; align-items: baseline }
+.gr-atr th, .gr-atr td { padding: 0 }
+.gr-atr .su { color: var(--long) } .gr-atr .giu { color: var(--short) }
+.grafici { border-radius: 14px; padding: 14px 16px; gap: 10px;
+  background: color-mix(in srgb, var(--panel) 66%, transparent); border-color: var(--vetro-bordo);
+  box-shadow: 0 1px 0 var(--vetro-luce) inset, 0 14px 30px -20px rgba(0, 0, 0, .45) }
+/* cornici dei grafici: la grafite resta (è il grafico di Luigi), angoli e ombra come la scatola del semaforo */
+.gr-col, .op-grafici { border-radius: 12px; overflow: hidden; box-shadow: 0 3px 0 #141210, 0 10px 20px -10px rgba(0, 0, 0, .5) }
+.gr-col { padding: 8px }
+.gr-griglia { gap: 14px }
+
+/* pagina Segnali: le quattro tabelle D1, H8, H4, H1 affiancate (Luigi 27/10) */
+/* tutte e quattro affiancate e senza scorrere (utente 27/10: "ma devo scrollare?"): righe basse, numeri piccoli */
+.seg-tab { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px 12px; margin-bottom: 14px; }
+@media (max-width: 900px) { .seg-tab { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .seg-tab { grid-template-columns: 1fr; } }
+/* niente barra di scorrimento: le colonne si stringono, e sotto i 270 px la tabella va a capo nella griglia.
+   Ogni tabella è una carta in rilievo (utente 27/10: "pannelli tre d"): vetro coi colori del bradipo, bordo spesso sotto
+   come i pulsanti alla Josh Comeau, ombre a strati, luce dall'alto; al passaggio si solleva. */
+.seg-tab { perspective: 1200px; padding-bottom: 6px; }
+.seg-tab .cot-box { overflow: visible; position: relative; padding: 6px 8px 4px; border-radius: 14px;
+  border: 1px solid var(--vetro-bordo);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, #fff 8%), color-mix(in srgb, var(--panel) 78%, transparent));
+  box-shadow: 0 1px 0 color-mix(in srgb, #fff 55%, transparent) inset,
+    0 -1px 0 color-mix(in srgb, #000 8%, transparent) inset,
+    0 6px 0 color-mix(in srgb, var(--pelo-scuro) 40%, #000 18%),
+    0 10px 14px -6px rgba(0, 0, 0, .28), 0 26px 40px -24px rgba(0, 0, 0, .45);
+  transform: translateY(0) rotateX(0); transform-origin: 50% 100%;
+  transition: transform .25s cubic-bezier(.3, .7, .4, 1.4), box-shadow .25s ease; }
+.seg-tab .cot-box::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(160deg, color-mix(in srgb, #fff 22%, transparent) 0%, transparent 38%); }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .seg-tab .cot-box:hover { transform: translateY(-5px) rotateX(3deg);
+    box-shadow: 0 1px 0 color-mix(in srgb, #fff 55%, transparent) inset,
+      0 -1px 0 color-mix(in srgb, #000 8%, transparent) inset,
+      0 11px 0 color-mix(in srgb, var(--pelo-scuro) 40%, #000 18%),
+      0 18px 22px -8px rgba(0, 0, 0, .3), 0 40px 50px -26px rgba(0, 0, 0, .5); }
+}
+/* l'etichetta del TF: una placchetta in rilievo appoggiata sull'angolo della carta */
+.seg-tab .seg-tf { display: inline-block; padding: 1px 10px; border-radius: 7px; text-transform: none;
+  font: 700 13px var(--f-body); letter-spacing: .02em; color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--foglia) 85%, #fff 15%), var(--foglia));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .3) inset, 0 3px 0 color-mix(in srgb, var(--foglia) 55%, #000); }
+.seg-tab .cot tbody tr:nth-child(even) { background: color-mix(in srgb, var(--pelo) 6%, transparent); }
+.seg-tab .cot tbody tr:last-child th, .seg-tab .cot tbody tr:last-child td { border-bottom: 0; }
+.seg-tab .cot { font-size: 12px; line-height: 1.2; }
+.seg-tab .cot th, .seg-tab .cot td { padding: 1px 3px; white-space: nowrap; }
+.seg-tab .cot .lato { font-size: 12px; }
+.seg-tab .cot thead th { vertical-align: bottom; padding-bottom: 3px; }
+.seg-tab .cot thead th { font-size: 10px; }
+.seg-tab .nuovo { color: var(--long); font-weight: 700; }
+
+.op-dati .op-sg { grid-column: 1 / -1; }    /* prezzo del segnale della posizione su tutta la riga (utente 27/10) */
+.video-analisi { display: block; width: 100%; max-height: 70vh; margin: 8px 0; background: #000; border-radius: 6px }
+
+/* ===== charting (utente 30/10): strumenti a sinistra, opzioni in alto, tutto schermo ===== */
+.gr-barra-top { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; position: relative; z-index: 20 }
+.gr-gruppo { display: inline-flex; gap: 4px }
+.gr-barra-top .filtro[aria-pressed="true"]:hover { color: var(--ink) }
+.gr-pieno { margin-left: auto }
+.gr-area { display: flex; gap: 8px; min-height: 0; min-width: 0 }
+.gr-lato { flex: 0 0 36px; display: flex; flex-direction: column; gap: 3px; padding: 5px 3px; background: #2f2f2f; border-radius: 10px; align-self: flex-start; overflow: auto; max-height: 100% }
+.gr-lato button { all: unset; box-sizing: border-box; width: 30px; height: 28px; display: grid; place-items: center; cursor: pointer; border-radius: 6px; color: #e8e8e8; font: 15px/1 var(--f-body) }
+.gr-lato button:hover { background: #4a4a4a }
+.gr-lato button[aria-pressed="true"] { background: #4fc3f7; color: #101010 }
+.gr-lato button:focus-visible { outline: 2px solid #ffd60a; outline-offset: 1px }
+.gr-lato-sep { height: 1px; background: #555; margin: 3px 2px; flex: none }
+.gr-lato .gr-colore { height: 18px }
+.gr-lato .gr-colore::after { content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 1px rgba(0,0,0,.5) }
+.gr-lato .gr-colore.scelto::after { box-shadow: 0 0 0 2px #fff }
+.gr-menu { position: relative }
+.gr-menu > summary { list-style: none; cursor: pointer; display: inline-block }
+.gr-menu > summary::-webkit-details-marker { display: none }
+.gr-menu-box { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; width: 290px; max-height: 70vh; overflow: auto; padding: 10px 12px; border-radius: 10px;
+  background: #2b2b2b; color: #e8e8e8; border: 1px solid #555; box-shadow: 0 14px 30px -10px rgba(0,0,0,.6); font: 13px var(--f-body); display: grid; gap: 5px }
+.gr-menu-box h4 { margin: 6px 0 0; font: 600 12px var(--f-body); color: #a8a8a8 }
+.gr-menu-box .muto { margin: 4px 0 0; font-size: 12px; color: #a8a8a8 }
+.gr-menu-box small { color: #a8a8a8 }
+.gr-voce { display: flex; align-items: center; gap: 6px; cursor: pointer }
+.gr-voce label { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; cursor: pointer }
+.gr-punto { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none }
+.gr-x { all: unset; cursor: pointer; margin-left: auto; padding: 0 5px; color: #ccc }
+.gr-x:hover { color: #fff }
+.gr-nuova { cursor: default; margin-top: 4px }
+.gr-nuova select, .gr-nuova input { background: #3d3d3d; color: #eee; border: 1px solid #666; border-radius: 4px; padding: 2px 4px; font: 13px var(--f-body) }
+.gr-nuova input { width: 58px }
+.gr-pannelli { flex: none; display: flex; flex-direction: column }
+.gr-osc-nome { position: absolute; left: 6px; top: 3px; z-index: 4; font: 10.5px var(--f-mono); color: #bdbdbd; pointer-events: none }
+.gr-prezzo.disegna canvas, .gr-osc.disegna canvas { cursor: crosshair !important }
+.gr-prezzo.sopra-disegno canvas, .gr-osc.sopra-disegno canvas { cursor: pointer !important }
+.grafici:fullscreen { display: flex; flex-direction: column; gap: 6px; padding: 8px; overflow: hidden; border-radius: 0; background: #2a2a2a; color: #e8e8e8 }
+.grafici:fullscreen .gr-area { flex: 1 1 0 }
+.grafici:fullscreen .gr-griglia { height: auto; align-self: stretch }
+.grafici:fullscreen .gr-griglia.due { grid-auto-rows: auto }
+.grafici:fullscreen .gr-barra, .grafici:fullscreen .legenda, .grafici:fullscreen .gr-atr, .grafici:fullscreen .storia-trade { display: none }
+@media (max-width: 760px) {
+  .gr-area { flex-direction: column }
+  .gr-lato { flex: none; flex-direction: row; flex-wrap: wrap; align-self: stretch; max-height: none }
+  .gr-lato-sep { width: 1px; height: 22px; margin: 3px }
+  .gr-lato .gr-colore { width: 22px; height: 28px }
+  .gr-griglia { flex: none; width: 100%; height: max(440px, 72vh) }
+  .gr-menu-box { width: min(290px, 78vw) }
+  .gr-pieno { margin-left: 0 }
+  .gr-osc { height: 64px }
+  .gr-info { display: none }
+}
+/* il bordo degli oscillatori si tira su e giù (utente 31/10): alto zero, la presa sta sopra i grafici */
+.gr-bordo { flex: none; height: 0; position: relative; z-index: 8; touch-action: none }
+.gr-bordo::before { content: ""; position: absolute; left: 0; right: 0; top: -5px; height: 10px; cursor: ns-resize }
+.gr-bordo::after { content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 2px; background: #ffd60a; opacity: 0; transition: opacity .12s; pointer-events: none }
+.gr-bordo:hover::after, .gr-bordo.attivo::after { opacity: .9 }
+/* quello che è scelto sul grafico: nome e ✕ togli accanto al clic (utente 31/10) */
+.gr-col { position: relative }
+.gr-scelta { position: absolute; z-index: 12; display: flex; align-items: center; gap: 8px; padding: 3px 4px 3px 9px; border-radius: 6px; background: #161616; box-shadow: 0 2px 8px rgba(0,0,0,.5); color: #eee; font: 12px var(--f-mono); white-space: nowrap }
+.gr-scelta button { all: unset; cursor: pointer; padding: 2px 7px; border-radius: 4px; background: #5a2a26; color: #fff }
+.gr-scelta button:hover, .gr-scelta button:focus-visible { background: #c0392b }
+.gr-osc-x { all: unset; position: absolute; right: 74px; top: 3px; z-index: 5; cursor: pointer; padding: 0 6px; border-radius: 3px; background: rgba(0,0,0,.45); color: #ddd; font-size: 12px }
+.gr-osc-x:hover, .gr-osc-x:focus-visible { background: #c0392b; color: #fff }
