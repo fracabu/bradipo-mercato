@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bradipo · Mercato</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="marchio"><svg class="logo" viewBox="0 0 64 50" role="img" aria-label="Bradipo appeso al ramo">
+      <path d="M1 8 Q32 3.5 63 8.5" fill="none" stroke="var(--ramo)" stroke-width="4" stroke-linecap="round"/>
+      <path d="M53 6.5 q4 -5.5 9 -3.5" fill="none" stroke="var(--foglia)" stroke-width="3" stroke-linecap="round"/>
+      <g class="dondola">
+      <path d="M14 10 C14 16 16 21 20 25 M22 10 C22 16 23 20 26 24 M41 10 C41 16 40 20 38 24 M49 10 C49 16 47 21 43 25" fill="none" stroke="var(--pelo)" stroke-width="5.5" stroke-linecap="round"/>
+      <path d="M11.4 10.5 c0 -3.2 1.2 -5.2 3.4 -4.6 M13.6 10.5 c0 -3.2 1.2 -5.2 3.4 -4.6 M15.8 10.5 c0 -3.2 1.2 -5.2 3.4 -4.6 M19.4 10.5 c0 -3.2 1.2 -5.2 3.4 -4.6 M21.6 10.5 c0 -3.2 1.2 -5.2 3.4 -4.6 M23.8 10.5 c0 -3.2 1.2 -5.2 3.4 -4.6 M38.4 10.5 c0 -3.2 1.2 -5.2 3.4 -4.6 M40.6 10.5 c0 -3.2 1.2 -5.2 3.4 -4.6 M42.8 10.5 c0 -3.2 1.2 -5.2 3.4 -4.6 M46.4 10.5 c0 -3.2 1.2 -5.2 3.4 -4.6 M48.6 10.5 c0 -3.2 1.2 -5.2 3.4 -4.6 M50.8 10.5 c0 -3.2 1.2 -5.2 3.4 -4.6" fill="none" stroke="var(--unghie)" stroke-width="1.3" stroke-linecap="round"/>
+      <ellipse cx="33" cy="27" rx="16" ry="8.5" fill="var(--pelo)"/>
+      <path d="M22 31 q3 2 6 0 M30 33 q3 2 6 0 M38 31 q3 2 6 0" fill="none" stroke="var(--pelo-scuro)" stroke-width="1" stroke-linecap="round"/>
+      <circle cx="15" cy="31" r="9.5" fill="var(--pelo)"/>
+      <ellipse cx="15" cy="32.5" rx="7.4" ry="5.9" fill="var(--muso)"/>
+      <g class="occhi">
+      <ellipse cx="11.6" cy="31.2" rx="2.9" ry="1.7" transform="rotate(-18 11.6 31.2)" fill="var(--muso-scuro)"/>
+      <ellipse cx="18.4" cy="31.2" rx="2.9" ry="1.7" transform="rotate(18 18.4 31.2)" fill="var(--muso-scuro)"/>
+      <circle cx="12" cy="31" r=".75" fill="var(--muso)"/><circle cx="18" cy="31" r=".75" fill="var(--muso)"/></g>
+      <ellipse cx="15" cy="34" rx="1.4" ry=".95" fill="var(--muso-scuro)"/>
+      <path d="M13 35.8 Q15 37.3 17 35.8" fill="none" stroke="var(--muso-scuro)" stroke-width="1" stroke-linecap="round"/>
+      </g>
+    </svg>
+      <h1>Bradipo <span>· il mercato col metodo di Luigi</span></h1></div>
+  </header>
+  <!-- la pagina: Vue 3 senza compilazione, un componente per pagina (js/componenti/), si sceglie coi pulsanti in alto -->
+  <div id="app" class="app"></div>
+</div>
+
+<script type="importmap">{ "imports": { "vue": "https://unpkg.com/vue@3.4.38/dist/vue.esm-browser.prod.js" } }</script>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
